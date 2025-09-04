@@ -1,42 +1,25 @@
 from flask import Flask, request, jsonify
-import requests
-import os
 import json
+import urllib.parse
 
-app = Flask(__name__)
-
-SLACK_BOT_TOKEN = os.environ.get('SLACK_BOT_TOKEN')
-LANGDOCK_API_KEY = os.environ.get('LANGDOCK_API_KEY')
-LANGDOCK_ASSISTANT_ID = os.environ.get('LANGDOCK_ASSISTANT_ID')
-
-def handler(event, context):
+def handler(req):
     """Vercel serverless handler"""
-    if event['httpMethod'] == 'POST':
-        # Parse form data from Slack
-        form_data = parse_form_data(event['body'])
-        channel_id = form_data.get('channel_id', 'unknown')
-        
-        return {
-            'statusCode': 200,
-            'headers': {'Content-Type': 'application/json'},
-            'body': json.dumps({
-                "response_type": "in_channel",
-                "text": f"✅ Bot working! Processing channel: {channel_id}"
-            })
-        }
+    if req.method == 'GET':
+        return 'Incident Summary Bot is running!'
     
-    return {
-        'statusCode': 200,
-        'headers': {'Content-Type': 'text/plain'},
-        'body': 'Incident Summary Bot is running!'
-    }
-
-def parse_form_data(body):
-    """Parse URL-encoded form data from Slack"""
-    pairs = body.split('&')
-    data = {}
-    for pair in pairs:
-        if '=' in pair:
-            key, value = pair.split('=', 1)
-            data[key] = value.replace('+', ' ')
-    return data
+    if req.method == 'POST':
+        # Parse the form data from Slack
+        body = req.get_data(as_text=True)
+        form_data = urllib.parse.parse_qs(body)
+        
+        # Extract channel_id (it comes as a list, so take first item)
+        channel_id = form_data.get('channel_id', ['unknown'])[0]
+        
+        response = {
+            "response_type": "in_channel",
+            "text": f"✅ Bot working! Processing channel: {channel_id}"
+        }
+        
+        return json.dumps(response), 200, {'Content-Type': 'application/json'}
+    
+    return 'Method not allowed', 405
